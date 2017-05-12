@@ -257,8 +257,7 @@ function init() {
 
     loader.loadModel(stageFile, function(object){
         let stageMesh = object;
-
-        let stageMaterial = makeStageMaterials(stageMesh.material.materials);
+        let stageMaterial = makeStageMaterials(stageMesh.material);
         stageMaterial.outlineParameters = {
             visible: false
         };
