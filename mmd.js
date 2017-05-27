@@ -152,7 +152,7 @@ let shader = {
     `
 };
 
-var container, stats, spinner;
+var container, stats, loaderUI, progressBlue;
 
 var modelMesh, controlCamera, screenCamera, scene, renderer, effect;
 var helper, ikHelper, physicsHelper;
@@ -176,11 +176,9 @@ let screenHeight = 60;
 window.onload = init;
 
 function init() {
-    spinner = document.createElement('div');
+    loaderUI = document.getElementById('loader');
+    progressBlue = document.getElementById('progressBlue');
     container = document.createElement( 'div' );
-
-    spinner.className = "spinner";
-    document.body.appendChild( spinner );
 
     controlCamera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 2000 );
     controlCamera.position.set(0,50,100);
@@ -238,8 +236,9 @@ function init() {
     // model
     var onProgress = function ( xhr ) {
         if ( xhr.lengthComputable ) {
-            var percentComplete = xhr.loaded / xhr.total * 100;
-            console.log( Math.round(percentComplete, 2) + '% downloaded' );
+            var percentComplete = Math.round(xhr.loaded / xhr.total * 100);
+            progressBlue.style.width = percentComplete +'%';
+            progressBlue.innerHTML = percentComplete +'%';
         }
     };
 
@@ -303,7 +302,7 @@ function init() {
                     animate();
                     moveLight();
                     moveOtaku();
-                    document.body.removeChild( spinner );
+                    document.body.removeChild( loaderUI );
                     document.body.appendChild( container );
                 }, onProgress, onError );
             }, onProgress, onError );

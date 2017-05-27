@@ -15,21 +15,44 @@ body {
 }
 #info a, .button { color: #fff; font-weight: bold; text-decoration: underline; cursor: pointer }
 
-.spinner {
+#loader{
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 300px;
+    height: 300px;
+    margin: -150px 0 0 -150px;
+}
+
+#spinner {
     position: absolute;
     left: 50%;
     top: 50%;
     z-index: 1;
     width: 150px;
     height: 150px;
-    margin: -75px 0 0 -75px;
+    margin: -91px 0 0 -91px;
     border: 16px solid #f3f3f3;
     border-radius: 50%;
     border-top: 16px solid #3498db;
-    width: 120px;
-    height: 120px;
     -webkit-animation: spin 2s linear infinite;
     animation: spin 2s linear infinite;
+}
+#progressGray {
+    position: absolute;
+    width: 100%;
+    bottom: 0px;
+    height: 16px;
+    background-color: #f3f3f3;
+}
+
+#progressBlue {
+    width: 0%;
+    height: 16px;
+    background-color: #3498db;
+    text-align: center; /* To center it horizontally (if you want) */
+    line-height: 16px; /* To center it vertically */
+    color: white;
 }
 
 @-webkit-keyframes spin {
