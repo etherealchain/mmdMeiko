@@ -234,9 +234,30 @@ function init() {
     container.appendChild( stats.dom );
 
     // model
-    var onProgress = function ( xhr ) {
+    var onProgress1 = function ( xhr ) {
         if ( xhr.lengthComputable ) {
-            var percentComplete = Math.round(xhr.loaded / xhr.total * 100);
+            var percentComplete = Math.round(xhr.loaded / xhr.total * 100)/4;
+            progressBlue.style.width = percentComplete +'%';
+            progressBlue.innerHTML = percentComplete +'%';
+        }
+    };
+    var onProgress2 = function ( xhr ) {
+        if ( xhr.lengthComputable ) {
+            var percentComplete = Math.round(xhr.loaded / xhr.total * 100)/4 + 25;
+            progressBlue.style.width = percentComplete +'%';
+            progressBlue.innerHTML = percentComplete +'%';
+        }
+    };
+    var onProgress3 = function ( xhr ) {
+        if ( xhr.lengthComputable ) {
+            var percentComplete = Math.round(xhr.loaded / xhr.total * 100)/4 + 50;
+            progressBlue.style.width = percentComplete +'%';
+            progressBlue.innerHTML = percentComplete +'%';
+        }
+    };
+    var onProgress4 = function ( xhr ) {
+        if ( xhr.lengthComputable ) {
+            var percentComplete = Math.round(xhr.loaded / xhr.total * 100)/4 + 75;
             progressBlue.style.width = percentComplete +'%';
             progressBlue.innerHTML = percentComplete +'%';
         }
@@ -304,10 +325,10 @@ function init() {
                     moveOtaku();
                     document.body.removeChild( loaderUI );
                     document.body.appendChild( container );
-                }, onProgress, onError );
-            }, onProgress, onError );
-        }, onProgress, onError);
-    }, onProgress, onError);
+                }, onProgress4, onError );
+            }, onProgress3, onError );
+        }, onProgress2, onError);
+    }, onProgress1, onError);
 
     // set control
     var controls = new THREE.OrbitControls( controlCamera, renderer.domElement );
