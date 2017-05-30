@@ -195,20 +195,20 @@ function init() {
     scene.add(screen);
 
     createLight();
-    createCrowd();
+    // createCrowd();
 
     // renderer
     renderer = new THREE.WebGLRenderer( { antialias: true } );
     renderer.setPixelRatio( window.devicePixelRatio );
     renderer.setSize( window.innerWidth, window.innerHeight );
     renderer.setClearColor( new THREE.Color( 0x000000 ) );
-    renderer.setFaceCulling(THREE.CullFaceBack);
-    renderer.shadowMapEnabled = true;
-    renderer.shadowMapType = THREE.PCFSoftShadowMap;
+    // renderer.setFaceCulling(THREE.CullFaceBack);
+    // renderer.shadowMapEnabled = true;
+    // renderer.shadowMapType = THREE.PCFSoftShadowMap;
     container.appendChild( renderer.domElement );
 
     effect = new THREE.OutlineEffect( renderer );
-    mirror = new MirrorReflection( controlCamera, { clipBias: 0.003,textureWidth:textureSize, textureHeight:textureSize } );
+    // mirror = new MirrorReflection( controlCamera, { clipBias: 0.003,textureWidth:textureSize, textureHeight:textureSize } );
 
     floorMaterial = new THREE.ShaderMaterial({
         vertexShader:shader.vertexShader,
@@ -216,8 +216,8 @@ function init() {
         uniforms:shader.uniforms,
         lights:true
     });
-    floorMaterial.uniforms.mirrorSampler.value = mirror.renderTarget.texture;
-    floorMaterial.uniforms.textureMatrix.value = mirror.textureMatrix;
+    // floorMaterial.uniforms.mirrorSampler.value = mirror.renderTarget.texture;
+    // floorMaterial.uniforms.textureMatrix.value = mirror.textureMatrix;
     floorMaterial.outlineParameters = {
         visible: false
     };
@@ -227,7 +227,7 @@ function init() {
     circleFloor.rotateX( - Math.PI / 2 );
     circleFloor.receiveShadow = true;
     circleFloor.position.setY(-0.1);
-    scene.add( circleFloor );
+    // scene.add( circleFloor );
 
     // STATS
     stats = new Stats();
@@ -282,7 +282,7 @@ function init() {
             visible: false
         };
         stageMesh.material = stageMaterial;
-        scene.add( stageMesh );
+        // scene.add( stageMesh );
         
         loader.loadAudio(audioFile, function(audio,listener){
             audioVolume = audio.getVolume();
@@ -322,7 +322,7 @@ function init() {
                     initGui();
                     animate();
                     moveLight();
-                    moveOtaku();
+                    // moveOtaku();
                     document.body.removeChild( loaderUI );
                     document.body.appendChild( container );
                 }, onProgress4, onError );
@@ -449,7 +449,7 @@ function onWindowResize() {
 // render
 function animate() {
     requestAnimationFrame( animate );
-    TWEEN.update();
+    // TWEEN.update();
     stats.begin();
     render();
     stats.end();
@@ -457,19 +457,19 @@ function animate() {
 
 function render() {
     
-    if ( lightHelper1 ) lightHelper1.update();
-    if ( lightHelper2 ) lightHelper2.update();
-    if ( lightHelper3 ) lightHelper3.update();
+    // if ( lightHelper1 ) lightHelper1.update();
+    // if ( lightHelper2 ) lightHelper2.update();
+    // if ( lightHelper3 ) lightHelper3.update();
 
     helper.animate( clock.getDelta() );
     if ( physicsHelper !== undefined && physicsHelper.visible ) physicsHelper.update();
     if ( ikHelper !== undefined && ikHelper.visible ) ikHelper.update();
 
     // render to screen
-    effect.render( scene, screenCamera, rtTexture, true);
+    // effect.render( scene, screenCamera, rtTexture, true);
     // render mirror
-    mirror.updateTextureMatrix();
-    renderer.render( scene, mirror.mirrorCamera, mirror.renderTarget, true);
+    // mirror.updateTextureMatrix();
+    // renderer.render( scene, mirror.mirrorCamera, mirror.renderTarget, true);
 
     effect.render( scene, controlCamera );
 }
