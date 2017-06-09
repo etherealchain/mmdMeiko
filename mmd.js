@@ -202,7 +202,7 @@ function init() {
     renderer = new THREE.WebGLRenderer( { antialias: true } );
     renderer.setPixelRatio( window.devicePixelRatio );
     renderer.setSize( window.innerWidth, window.innerHeight );
-    renderer.setClearColor( new THREE.Color( 0x000000 ) );
+    renderer.setClearColor( new THREE.Color( 0xBDBDBD ) );
     renderer.shadowMapEnabled = true;
     renderer.shadowMapType = THREE.PCFSoftShadowMap;
     container.appendChild( renderer.domElement );
@@ -529,11 +529,15 @@ function createLight(){
     var ambient = new THREE.AmbientLight( 0x808080 );
     scene.add( ambient );
 
-    lightPoint = new THREE.Mesh(new THREE.SphereBufferGeometry(5,32,32), new THREE.MeshBasicMaterial({color:0xFF7F00}));
+    lightPoint = new THREE.Mesh(new THREE.SphereBufferGeometry(1,32,32), new THREE.MeshBasicMaterial({color:0xFF7F00}));
     lightPoint.position.set(0,50,0);
+    lightPoint.outlineParameters = {
+        visible: false
+    };
     scene.add(lightPoint);
     pointLight = new THREE.PointLight(0xFF7F00,1,100);
     pointLight.position.set(0,50,0);
+    pointLight.castShadow = true;
     scene.add(pointLight);
     // for(i = 0 ; i < 1 ; i++){
         // spotLight1 = createSpotlight( 0xFF7F00 );
