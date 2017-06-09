@@ -165,6 +165,7 @@ let circleFloor, screen, rtTexture;
 let spotLight1,spotLight2,spotLight3;
 let lightHelper1,lightHelper2,lightHelper3;
 let textureLoader = new THREE.TextureLoader();
+var pointLight;
 
 
 let mirror, floorMaterial;
@@ -202,13 +203,12 @@ function init() {
     renderer.setPixelRatio( window.devicePixelRatio );
     renderer.setSize( window.innerWidth, window.innerHeight );
     renderer.setClearColor( new THREE.Color( 0x000000 ) );
-    // renderer.setFaceCulling(THREE.CullFaceBack);
-    // renderer.shadowMapEnabled = true;
-    // renderer.shadowMapType = THREE.PCFSoftShadowMap;
+    renderer.shadowMapEnabled = true;
+    renderer.shadowMapType = THREE.PCFSoftShadowMap;
     container.appendChild( renderer.domElement );
 
     effect = new THREE.OutlineEffect( renderer );
-    // mirror = new MirrorReflection( controlCamera, { clipBias: 0.003,textureWidth:textureSize, textureHeight:textureSize } );
+    mirror = new MirrorReflection( controlCamera, { clipBias: 0.003,textureWidth:textureSize, textureHeight:textureSize } );
 
     floorMaterial = new THREE.ShaderMaterial({
         vertexShader:shader.vertexShader,
@@ -216,8 +216,8 @@ function init() {
         uniforms:shader.uniforms,
         lights:true
     });
-    // floorMaterial.uniforms.mirrorSampler.value = mirror.renderTarget.texture;
-    // floorMaterial.uniforms.textureMatrix.value = mirror.textureMatrix;
+    floorMaterial.uniforms.mirrorSampler.value = mirror.renderTarget.texture;
+    floorMaterial.uniforms.textureMatrix.value = mirror.textureMatrix;
     floorMaterial.outlineParameters = {
         visible: false
     };
@@ -227,7 +227,7 @@ function init() {
     circleFloor.rotateX( - Math.PI / 2 );
     circleFloor.receiveShadow = true;
     circleFloor.position.setY(-0.1);
-    // scene.add( circleFloor );
+    scene.add( circleFloor );
 
     // STATS
     stats = new Stats();
@@ -243,21 +243,14 @@ function init() {
     };
     var onProgress2 = function ( xhr ) {
         if ( xhr.lengthComputable ) {
-            var percentComplete = Math.round(xhr.loaded / xhr.total * 100)/4 + 25;
+            var percentComplete = Math.round(xhr.loaded / xhr.total * 100)/4 + 33;
             progressBlue.style.width = percentComplete +'%';
             progressBlue.innerHTML = percentComplete +'%';
         }
     };
     var onProgress3 = function ( xhr ) {
         if ( xhr.lengthComputable ) {
-            var percentComplete = Math.round(xhr.loaded / xhr.total * 100)/4 + 50;
-            progressBlue.style.width = percentComplete +'%';
-            progressBlue.innerHTML = percentComplete +'%';
-        }
-    };
-    var onProgress4 = function ( xhr ) {
-        if ( xhr.lengthComputable ) {
-            var percentComplete = Math.round(xhr.loaded / xhr.total * 100)/4 + 75;
+            var percentComplete = Math.round(xhr.loaded / xhr.total * 100)/4 + 66;
             progressBlue.style.width = percentComplete +'%';
             progressBlue.innerHTML = percentComplete +'%';
         }
@@ -275,59 +268,49 @@ function init() {
     helper = new THREE.MMDHelper();
     var loader = new THREE.MMDLoader();
 
-    loader.loadModel(stageFile, function(object){
-        let stageMesh = object;
-        let stageMaterial = makeStageMaterials(stageMesh.material);
-        stageMaterial.outlineParameters = {
-            visible: false
-        };
-        stageMesh.material = stageMaterial;
-        // scene.add( stageMesh );
-        
-        loader.loadAudio(audioFile, function(audio,listener){
-            audioVolume = audio.getVolume();
-            helper.setAudio(audio,listener);
-            audioPlayer = audio;
+    loader.loadAudio(audioFile, function(audio,listener){
+        audioVolume = audio.getVolume();
+        helper.setAudio(audio,listener);
+        audioPlayer = audio;
 
-            loader.loadVmds( cameraFiles, function ( vmd ) {
-                helper.setCamera( screenCamera );
-                loader.pourVmdIntoCamera( screenCamera, vmd );
-                helper.setCameraAnimation( screenCamera );
+        loader.loadVmds( cameraFiles, function ( vmd ) {
+            helper.setCamera( screenCamera );
+            loader.pourVmdIntoCamera( screenCamera, vmd );
+            helper.setCameraAnimation( screenCamera );
 
-                loader.load( modelFile, vmdFiles, function ( object ) {
+            loader.load( modelFile, vmdFiles, function ( object ) {
 
-                    modelMesh = object;
-                    modelMesh.castShadow = true;
-                    scene.add( modelMesh );
+                modelMesh = object;
+                modelMesh.castShadow = true;
+                scene.add( modelMesh );
 
-                    helper.add( modelMesh );
-                    helper.setAnimation( modelMesh );
+                helper.add( modelMesh );
+                helper.setAnimation( modelMesh );
 
-                    /*
-                    * Note: create CCDIKHelper after calling helper.setAnimation()
-                    */
-                    ikHelper = new THREE.CCDIKHelper( modelMesh );
-                    ikHelper.visible = false;
-                    scene.add( ikHelper );
+                /*
+                * Note: create CCDIKHelper after calling helper.setAnimation()
+                */
+                ikHelper = new THREE.CCDIKHelper( modelMesh );
+                ikHelper.visible = false;
+                scene.add( ikHelper );
 
-                    /*
-                    * Note: You're recommended to call helper.setPhysics()
-                    *       after calling helper.setAnimation().
-                    */
-                    helper.setPhysics( modelMesh );
-                    physicsHelper = new THREE.MMDPhysicsHelper( modelMesh );
-                    physicsHelper.visible = false;
-                    scene.add( physicsHelper );
-                    helper.unifyAnimationDuration();
-                    initGui();
-                    animate();
-                    moveLight();
-                    // moveOtaku();
-                    document.body.removeChild( loaderUI );
-                    document.body.appendChild( container );
-                }, onProgress4, onError );
+                /*
+                * Note: You're recommended to call helper.setPhysics()
+                *       after calling helper.setAnimation().
+                */
+                helper.setPhysics( modelMesh );
+                physicsHelper = new THREE.MMDPhysicsHelper( modelMesh );
+                physicsHelper.visible = false;
+                scene.add( physicsHelper );
+                helper.unifyAnimationDuration();
+                initGui();
+                animate();
+                moveLight();
+                // moveOtaku();
+                document.body.removeChild( loaderUI );
+                document.body.appendChild( container );
             }, onProgress3, onError );
-        }, onProgress2, onError);
+        }, onProgress2, onError );
     }, onProgress1, onError);
 
     // set control
@@ -376,7 +359,6 @@ function init() {
     function initGui () {
 
         var api = {
-            // 'animation': true,
             'gradient mapping': true,
             'ik': true,
             'outline': true,
@@ -387,10 +369,6 @@ function init() {
         };
 
         var gui = new dat.GUI();
-
-        // gui.add( api, 'animation' ).onChange( function () {
-        // 	helper.doAnimation = api[ 'animation' ];
-        // } );
 
         gui.add( api, 'gradient mapping' ).onChange( function () {
 
@@ -457,7 +435,7 @@ function animate() {
 
 function render() {
     
-    // if ( lightHelper1 ) lightHelper1.update();
+    if ( lightHelper1 ) lightHelper1.update();
     // if ( lightHelper2 ) lightHelper2.update();
     // if ( lightHelper3 ) lightHelper3.update();
 
@@ -466,10 +444,10 @@ function render() {
     if ( ikHelper !== undefined && ikHelper.visible ) ikHelper.update();
 
     // render to screen
-    // effect.render( scene, screenCamera, rtTexture, true);
+    effect.render( scene, screenCamera, rtTexture, true);
     // render mirror
-    // mirror.updateTextureMatrix();
-    // renderer.render( scene, mirror.mirrorCamera, mirror.renderTarget, true);
+    mirror.updateTextureMatrix();
+    renderer.render( scene, mirror.mirrorCamera, mirror.renderTarget, true);
 
     effect.render( scene, controlCamera );
 }
@@ -530,32 +508,51 @@ function moveOtaku(){
     setTimeout(moveOtaku, 2000);
 }
 
+
 // light
+var lightdegree = 0;
+var lightPoint;
 function moveLight(){
 
-    tween( spotLight1 );
-    tween( spotLight2 );
-    tween( spotLight3 );
-
-    setTimeout(moveLight, 5000);
+    // tween( spotLight1 );
+    // tween( spotLight2 );
+    // tween( spotLight3 );
+    lightdegree++;
+    let lightradian = lightdegree%360*Math.PI/180;
+    x = 50*Math.cos(lightradian);
+    y = 50*Math.sin(lightradian);
+    pointLight.position.set( x, y, 0 );
+    lightPoint.position.set(x,y,0);
+    setTimeout(moveLight, 20);
 }
 function createLight(){
     var ambient = new THREE.AmbientLight( 0x808080 );
     scene.add( ambient );
 
-    spotLight1 = createSpotlight( 0xFF7F00 );
-    spotLight2 = createSpotlight( 0x00FF7F );
-    spotLight3 = createSpotlight( 0x7F00FF );
-    spotLight1.position.set( 15, 40, 45 );
-    spotLight2.position.set( 0, 40, 35 );
-    spotLight3.position.set( -15, 40, 45 );
+    lightPoint = new THREE.Mesh(new THREE.SphereBufferGeometry(5,32,32), new THREE.MeshBasicMaterial({color:0xFF7F00}));
+    lightPoint.position.set(0,50,0);
+    scene.add(lightPoint);
+    pointLight = new THREE.PointLight(0xFF7F00,1,100);
+    pointLight.position.set(0,50,0);
+    scene.add(pointLight);
+    // for(i = 0 ; i < 1 ; i++){
+        // spotLight1 = createSpotlight( 0xFF7F00 );
+        // spotLight1.position.set( 0, 50, 0 );
+        // scene.add(spotLight1);
+    // }
+    // spotLight1 = createSpotlight( 0xFF7F00 );
+    // spotLight2 = createSpotlight( 0x00FF7F );
+    // spotLight3 = createSpotlight( 0x7F00FF );
+    // spotLight1.position.set( 15, 40, 45 );
+    // spotLight2.position.set( 0, 40, 35 );
+    // spotLight3.position.set( -15, 40, 45 );
     
     // lightHelper1 = new THREE.SpotLightHelper( spotLight1 );
     // lightHelper2 = new THREE.SpotLightHelper( spotLight2 );
     // lightHelper3 = new THREE.SpotLightHelper( spotLight3 );
 
-    scene.add( spotLight1, spotLight2, spotLight3 );
-    // scene.add( lightHelper1, lightHelper2, lightHelper3 );
+    // scene.add( spotLight1, spotLight2, spotLight3 );
+    // scene.add( lightHelper1);
 }
 
 function createSpotlight( color ) {
@@ -565,8 +562,8 @@ function createSpotlight( color ) {
     newObj.penumbra = 0.2;
     newObj.decay = 2;
     newObj.distance = 100;
-    newObj.shadow.mapSize.width = 1024;
-    newObj.shadow.mapSize.height = 1024;
+    newObj.shadow.mapSize.width = 512;
+    newObj.shadow.mapSize.height = 512;
     return newObj;
 }
 function tween( light ) {
