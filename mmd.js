@@ -208,7 +208,7 @@ function init() {
     container.appendChild( renderer.domElement );
 
     effect = new THREE.OutlineEffect( renderer );
-    mirror = new MirrorReflection( controlCamera, { clipBias: 0.003,textureWidth:textureSize, textureHeight:textureSize } );
+    // mirror = new MirrorReflection( controlCamera, { clipBias: 0.003,textureWidth:textureSize, textureHeight:textureSize } );
 
     floorMaterial = new THREE.ShaderMaterial({
         vertexShader:shader.vertexShader,
@@ -216,8 +216,8 @@ function init() {
         uniforms:shader.uniforms,
         lights:true
     });
-    floorMaterial.uniforms.mirrorSampler.value = mirror.renderTarget.texture;
-    floorMaterial.uniforms.textureMatrix.value = mirror.textureMatrix;
+    // floorMaterial.uniforms.mirrorSampler.value = mirror.renderTarget.texture;
+    // floorMaterial.uniforms.textureMatrix.value = mirror.textureMatrix;
     floorMaterial.outlineParameters = {
         visible: false
     };
@@ -444,10 +444,10 @@ function render() {
     if ( ikHelper !== undefined && ikHelper.visible ) ikHelper.update();
 
     // render to screen
-    effect.render( scene, screenCamera, rtTexture, true);
+    // effect.render( scene, screenCamera, rtTexture, true);
     // render mirror
-    mirror.updateTextureMatrix();
-    renderer.render( scene, mirror.mirrorCamera, mirror.renderTarget, true);
+    // mirror.updateTextureMatrix();
+    // renderer.render( scene, mirror.mirrorCamera, mirror.renderTarget, true);
 
     effect.render( scene, controlCamera );
 }
