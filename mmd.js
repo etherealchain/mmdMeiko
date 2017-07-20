@@ -165,7 +165,6 @@ let circleFloor, screen, rtTexture;
 let spotLight1,spotLight2,spotLight3;
 let lightHelper1,lightHelper2,lightHelper3;
 let textureLoader = new THREE.TextureLoader();
-var pointLight;
 
 
 let mirror, floorMaterial;
@@ -511,7 +510,9 @@ function moveOtaku(){
 
 // light
 var lightdegree = 0;
-var lightPoint;
+var lightSource;
+var pointLight;
+
 function moveLight(){
 
     // tween( spotLight1 );
@@ -529,16 +530,13 @@ function createLight(){
     var ambient = new THREE.AmbientLight( 0x808080 );
     scene.add( ambient );
 
-    lightPoint = new THREE.Mesh(new THREE.SphereBufferGeometry(1,32,32), new THREE.MeshBasicMaterial({color:0xFF7F00}));
-    lightPoint.position.set(0,50,0);
-    lightPoint.outlineParameters = {
-        visible: false
-    };
-    scene.add(lightPoint);
+    let spriteMap = textureLoader.load( 'data/circle.png' );
+    lightSource = new THREE.Sprite( new THREE.SpriteMaterial( { map: spriteMap, color: 0xff0000 } ) );
+    lightSource.position.set(0,50,0);
     pointLight = new THREE.PointLight(0xFF7F00,1,100);
-    pointLight.position.set(0,50,0);
     pointLight.castShadow = true;
-    scene.add(pointLight);
+    lightSource.add(pointLight);
+    scene.add(lightSource);
     // for(i = 0 ; i < 1 ; i++){
         // spotLight1 = createSpotlight( 0xFF7F00 );
         // spotLight1.position.set( 0, 50, 0 );
