@@ -222,7 +222,7 @@ function init() {
     };
     
     circleFloor = new THREE.Mesh( new THREE.CircleBufferGeometry( 45, 64), floorMaterial );
-    circleFloor.add( mirror );
+    // circleFloor.add( mirror );
     circleFloor.rotateX( - Math.PI / 2 );
     circleFloor.receiveShadow = true;
     circleFloor.position.setY(-0.1);
@@ -235,21 +235,21 @@ function init() {
     // model
     var onProgress1 = function ( xhr ) {
         if ( xhr.lengthComputable ) {
-            var percentComplete = Math.round(xhr.loaded / xhr.total * 100)/4;
+            var percentComplete = Math.round(xhr.loaded / xhr.total * 100)/3;
             progressBlue.style.width = percentComplete +'%';
             progressBlue.innerHTML = percentComplete +'%';
         }
     };
     var onProgress2 = function ( xhr ) {
         if ( xhr.lengthComputable ) {
-            var percentComplete = Math.round(xhr.loaded / xhr.total * 100)/4 + 33;
+            var percentComplete = Math.round(xhr.loaded / xhr.total * 100)/3 + 33;
             progressBlue.style.width = percentComplete +'%';
             progressBlue.innerHTML = percentComplete +'%';
         }
     };
     var onProgress3 = function ( xhr ) {
         if ( xhr.lengthComputable ) {
-            var percentComplete = Math.round(xhr.loaded / xhr.total * 100)/4 + 66;
+            var percentComplete = Math.round(xhr.loaded / xhr.total * 100)/3 + 66;
             progressBlue.style.width = percentComplete +'%';
             progressBlue.innerHTML = percentComplete +'%';
         }
@@ -262,7 +262,6 @@ function init() {
     var vmdFiles = [ 'data/motion.vmd' ];
     var audioFile = 'data/Niconico_Video-GINZA.mp3';
     var cameraFiles = [ 'data/camera.vmd' ];
-    let stageFile = 'data/wire_stage8blue.pmx';
 
     helper = new THREE.MMDHelper();
     var loader = new THREE.MMDLoader();
@@ -278,7 +277,6 @@ function init() {
             helper.setCameraAnimation( screenCamera );
 
             loader.load( modelFile, vmdFiles, function ( object ) {
-
                 modelMesh = object;
                 modelMesh.castShadow = true;
                 scene.add( modelMesh );
@@ -509,9 +507,10 @@ function moveOtaku(){
 
 
 // light
-var lightdegree = 0;
-var lightSource;
-var pointLight;
+var lightDegree = [];
+var lights = [];
+var lightMaterial;
+var lightRadius = 50;
 
 function moveLight(){
 
@@ -520,28 +519,42 @@ function moveLight(){
     // tween( spotLight3 );
     lightdegree++;
     let lightradian = lightdegree%360*Math.PI/180;
-    x = 50*Math.cos(lightradian);
-    y = 50*Math.sin(lightradian);
-    pointLight.position.set( x, y, 0 );
-    lightPoint.position.set(x,y,0);
+    x = lightRadius*Math.cos(lightradian);
+    y = lightRadius*Math.sin(lightradian);
+    lightSource.position.set(x,y,0);
     setTimeout(moveLight, 20);
 }
 function createLight(){
     var ambient = new THREE.AmbientLight( 0x808080 );
     scene.add( ambient );
 
-    let spriteMap = textureLoader.load( 'data/circle.png' );
-    lightSource = new THREE.Sprite( new THREE.SpriteMaterial( { map: spriteMap, color: 0xff0000 } ) );
-    lightSource.position.set(0,50,0);
-    pointLight = new THREE.PointLight(0xFF7F00,1,100);
-    pointLight.castShadow = true;
-    lightSource.add(pointLight);
-    scene.add(lightSource);
-    // for(i = 0 ; i < 1 ; i++){
-        // spotLight1 = createSpotlight( 0xFF7F00 );
-        // spotLight1.position.set( 0, 50, 0 );
-        // scene.add(spotLight1);
-    // }
+    lightMaterial = new THREE.ShaderMaterial( {
+        uniforms: {
+            scale: { type: "v3", value: new THREE.Vector3(5,5,1) },
+            color: {value: new THREE.Color()}
+        },
+        vertexShader: document.getElementById( 'distanceFieldvs' ).textContent,
+        fragmentShader: document.getElementById( 'distanceFieldfs' ).textContent,
+        transparent: true
+    } );
+
+    let light = createPointLight(0xFF7F00);
+    light.position.set( 0, lightRadius, 0 );
+    lights.push(light);
+    light = createPointLight(0x00FF7F);
+    light.position.set( lightRadius, 0, 0 );
+    lights.push(light);
+    light = createPointLight(0x7F00FF);
+    light.position.set( -lightRadius, 0, 0 );
+    lights.push(light);
+    
+    // lightSource = new THREE.Mesh( new THREE.PlaneGeometry( 1, 1 ), material );
+    // lightSource.position.set(0,50,0);
+    // pointLight = new THREE.PointLight(0xFF7F00,1,100);
+    // pointLight.castShadow = true;
+    // lightSource.add(pointLight);
+    // scene.add(lightSource);
+    
     // spotLight1 = createSpotlight( 0xFF7F00 );
     // spotLight2 = createSpotlight( 0x00FF7F );
     // spotLight3 = createSpotlight( 0x7F00FF );
@@ -555,6 +568,16 @@ function createLight(){
 
     // scene.add( spotLight1, spotLight2, spotLight3 );
     // scene.add( lightHelper1);
+}
+
+function createPointLight(color){
+
+    let lightSource = new THREE.Mesh( new THREE.PlaneGeometry( 1, 1 ), lightMaterial );
+    let pointLight = new THREE.PointLight(color, 1, 100);
+    pointLight.castShadow = true;
+    lightSource.add(pointLight);
+    scene.add(lightSource);
+    return lightSource;
 }
 
 function createSpotlight( color ) {
