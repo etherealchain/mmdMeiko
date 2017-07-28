@@ -25,24 +25,30 @@ let shader = {
 
 var container, stats, loaderUI, progressBlue;
 
-var modelMesh, controlCamera, screenCamera, scene, renderer, effect;
+var scene;
+var modelMesh, controlCamera, screenCamera;
+var renderer, effect;
 var helper, ikHelper, physicsHelper;
 
 var mouseX = 0, mouseY = 0;
 var clock = new THREE.Clock();
+var composer;
+var controls;
 
-let audioPlayer, audioVolume;
-let circleFloor, screen, rtTexture;
-let spotLight1,spotLight2,spotLight3;
-let lightHelper1,lightHelper2,lightHelper3;
-let textureLoader = new THREE.TextureLoader();
+var audioPlayer, audioVolume;
+var circleFloor, screen, rtTexture;
+var spotLight1,spotLight2,spotLight3;
+var lightHelper1,lightHelper2,lightHelper3;
+var textureLoader = new THREE.TextureLoader();
+var bloomTexture;
 
-
-let mirror, floorMaterial;
-let crowd = [];
-let textureSize = 512;
-let screenRatio = 1920/1080;
-let screenHeight = 60;
+var mirror, floorMaterial;
+var crowd = [];
+var textureSize = 512;
+var screenRatio = 1920/1080;
+var screenHeight = 60;
+var lightGroup;
+var otherGroup;
 
 window.onload = init;
 
@@ -50,6 +56,9 @@ function init() {
     loaderUI = document.getElementById('loader');
     progressBlue = document.getElementById('progressBlue');
     container = document.createElement( 'div' );
+
+    lightGroup = new THREE.Group();
+    otherGroup = new THREE.Group();
 
     controlCamera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 2000 );
     controlCamera.position.set(0,50,100);
@@ -59,6 +68,8 @@ function init() {
 
     scene = new THREE.Scene();
     rtTexture = new THREE.WebGLRenderTarget( textureSize, textureSize, { minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter, format: THREE.RGBFormat } );
+    bloomTexture = new THREE.WebGLRenderTarget(textureSize,textureSize, { minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter, format: THREE.RGBFormat });
+    
     screen = new THREE.Mesh(new THREE.PlaneBufferGeometry(screenRatio*screenHeight,screenHeight), new THREE.MeshPhongMaterial({color: 0xFFFFFF, map:rtTexture.texture}));
     screen.position.set(0,30,-100);
     scene.add(screen);
@@ -70,12 +81,23 @@ function init() {
     renderer = new THREE.WebGLRenderer( { antialias: true } );
     renderer.setPixelRatio( window.devicePixelRatio );
     renderer.setSize( window.innerWidth, window.innerHeight );
-    renderer.setClearColor( new THREE.Color( 0x2b2b2b ) );
+    renderer.setClearColor( new THREE.Color( 0x000000 ) );
     renderer.shadowMapEnabled = true;
     renderer.shadowMapType = THREE.PCFSoftShadowMap;
     container.appendChild( renderer.domElement );
 
     effect = new THREE.OutlineEffect( renderer );
+
+    let copyShader = new THREE.ShaderPass(THREE.CopyShader);
+    copyShader.renderToScreen = true;
+    let bloomPass = new Bloom(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4);
+
+    composer = new THREE.EffectComposer(renderer);
+    composer.setSize(window.innerWidth, window.innerHeight);
+    composer.addPass(new THREE.RenderPass(scene2, controlCamera));
+    composer.addPass(bloomPass);
+    composer.addPass(copyShader);
+
     mirror = new MirrorReflection( controlCamera, { clipBias: 0.003,textureWidth:textureSize, textureHeight:textureSize } );
 
     floorMaterial = new THREE.ShaderMaterial({
@@ -171,7 +193,7 @@ function init() {
                 helper.unifyAnimationDuration();
                 initGui();
                 animate();
-                moveLight();
+                // moveLight();
                 moveOtaku();
                 document.body.removeChild( loaderUI );
                 document.body.appendChild( container );
@@ -180,7 +202,7 @@ function init() {
     }, onProgress1, onError);
 
     // set control
-    var controls = new THREE.OrbitControls( controlCamera, renderer.domElement );
+    controls = new THREE.OrbitControls( controlCamera, renderer.domElement );
 
     window.addEventListener( 'resize', onWindowResize, false );
 
@@ -288,6 +310,7 @@ function onWindowResize() {
     controlCamera.updateProjectionMatrix();
 
     effect.setSize( window.innerWidth, window.innerHeight );
+    composer.setSize( window.innerWidth, window.innerHeight);
 }
 
 // render
@@ -309,13 +332,22 @@ function render() {
     if ( physicsHelper !== undefined && physicsHelper.visible ) physicsHelper.update();
     if ( ikHelper !== undefined && ikHelper.visible ) ikHelper.update();
 
-    // render to screen
-    effect.render( scene, screenCamera, rtTexture, true);
-    // render mirror
-    mirror.updateTextureMatrix();
-    renderer.render( scene, mirror.mirrorCamera, mirror.renderTarget, true);
+    // setting stencil buffer;
+    // renderer.context.enable(renderer.context.STENCIL_TEST);
+    // renderer.context.stencilFunc(renderer.context.ALWAYS,1,0xffffffff);
+    // renderer.context.stencilOp(renderer.context.REPLACE,renderer.context.REPLACE,renderer.context.REPLACE);
+    // renderer.render(scene2, controlCamera);
+    // renderer.context.disable(renderer.context.STENCIL_TEST);
 
-    effect.render( scene, controlCamera );
+    // render to screen
+    // effect.render( scene, screenCamera, rtTexture, true);
+    // render mirror
+    // mirror.updateTextureMatrix();
+    // renderer.render( scene, mirror.mirrorCamera, mirror.renderTarget, true);
+
+    // effect.render( scene, controlCamera );
+    // composer.render();
+    // controls.update();
 }
 
 // crowd
@@ -400,20 +432,22 @@ function createLight(){
             scale: { type: "v3", value: new THREE.Vector3(5,5,1) },
             color: {value: new THREE.Color()}
         },
-        vertexShader: document.getElementById( 'distanceFieldVS' ).textContent,
-        fragmentShader: document.getElementById( 'distanceFieldFS' ).textContent,
+        vertexShader: document.getElementById( 'lightVS' ).textContent,
+        fragmentShader: document.getElementById( 'lightFS' ).textContent,
         transparent: true
     } );
 
     createPointLight(0xFF7F00);
-    createPointLight(0x00FF7F);
-    createPointLight(0x0DA2F2);
+    // createPointLight(0x00FF7F);
+    // createPointLight(0x0DA2F2);
 
     lights[0].degree = 0;
-    lights[1].rotateY(120*Math.PI/180);
-    lights[1].degree = 30;
-    lights[2].rotateY(240*Math.PI/180);
-    lights[2].degree = 60;
+    // lights[1].rotateY(120*Math.PI/180);
+    // lights[1].degree = 30;
+    // lights[2].rotateY(240*Math.PI/180);
+    // lights[2].degree = 60;
+
+    lights2[0].degree = 0;
     
     // lightSource = new THREE.Mesh( new THREE.PlaneGeometry( 1, 1 ), material );
     // lightSource.position.set(0,50,0);
@@ -438,17 +472,18 @@ function createLight(){
 }
 
 function createPointLight(color){
-    let material = lightMaterial.clone();
-    material.uniforms.color.value = new THREE.Color(color);
-    let lightSource = new THREE.Mesh( new THREE.PlaneGeometry( 1, 1 ), material );
+   
     let pointLight = new THREE.PointLight(color, 1, lightRadius+10);
     let lightBase = new THREE.Object3D();
     pointLight.castShadow = true;
 
-    lightSource.add(pointLight);
-    lightBase.add(lightSource);
+    lightBase.add(pointLight);
     scene.add(lightBase);
     lights.push(lightBase);
+
+    let material = lightMaterial.clone();
+    material.uniforms.color.value = new THREE.Color(color);
+    let lightCircle = new THREE.Mesh( new THREE.PlaneGeometry( 1, 1 ), material );
 }
 
 function createSpotlight( color ) {

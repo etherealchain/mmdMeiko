@@ -18,7 +18,22 @@
 			</div>
 			</div>
 		</div>
-		<script id="distanceFieldVS" type="x-shader/x-vertex">
+		<script id="bloomVS" type="x-shader/x-vertex">
+			varying vec2 vUv;
+			void main{
+				vUv = uv;
+				gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+			}
+		</script>
+		<script id="bloomFS" type="x-shader/x-vertex">
+			uniform sampler2D tDiffuse;
+			varying vec2 vUv;
+			
+			void main{
+				vec4 texel = texture2D( tDiffuse, vUv );
+			}
+		</script>
+		<script id="lightVS" type="x-shader/x-vertex">
 			uniform vec3 scale;
 			varying vec2 v_uv;
                 
@@ -43,7 +58,7 @@
 				gl_Position =  finalPosition;
 			}
 		</script>
-		<script id="distanceFieldFS" type="x-shader/x-fragment">
+		<script id="lightFS" type="x-shader/x-fragment">
 			varying vec2 v_uv;
 			uniform vec3 color;
 			void main( void ) {
@@ -53,20 +68,13 @@
 				uv *= 2.0;
 				// Shifts every axis by -1.0
 				uv -= 1.0;
-			
-				// specify size of border. 0.0 - no border, 1.0 - border occupies the entire space
-				float borderSize = 0.3; 
-			
-				float dis = length(uv);
-				// size of circle in terms of uv 
-				float circleRadius = 1.0 - borderSize; 
-			
-				// distance field, 0.0 - point is inside rectangle, 1.0 point is on the far edge of the border.
-				float distanceField = length(max(dis-circleRadius,0.0) / borderSize);
 				
-				// calculate alpha accordingly to the value of the distance field
-				float alpha = 1.0 - distanceField;
-				gl_FragColor = vec4( color , alpha );
+				// size of circle in terms of uv 
+				float circleRadius = 1.0; 
+				
+				float smoothWidth = 0.01;
+				float alpha = smoothstep(circleRadius - smoothWidth, circleRadius, length(uv));
+				gl_FragColor = vec4( color , 1.0-alpha );
 			}
 		</script>
 		<script id="floorVS" type="x-shader/x-vertex">
@@ -208,6 +216,13 @@
 		<script src="lib/OutlineEffect.js"></script>
 		<script src="lib/CCDIKSolver.js"></script>
 		<script src="lib/MMDPhysics.js"></script>
+
+		<script src="lib/CopyShader.js"></script>
+		<script src="lib/EffectComposer.js"></script>
+		<script src="lib/RenderPass.js"></script>
+    	<script src="lib/ShaderPass.js"></script>
+		<script src="lib/MaskPass.js"></script>
+		<script src="bloom.js"></script>
 
 		<script src="lib/OrbitControls.js"></script>
 
