@@ -1,22 +1,26 @@
 Bloom = function(resolution, strength, radius){
-    THREE.Pass.call( this );
 
     this.strength = ( strength !== undefined ) ? strength : 1;
 	this.radius = radius;
 	this.resolution = ( resolution !== undefined ) ? new THREE.Vector2(resolution.x, resolution.y) : new THREE.Vector2(256, 256);
 
     // render targets
-	var pars = { minFilter: THREE.LinearFilter,
-                 magFilter: THREE.LinearFilter, 
-                 format: THREE.RGBAFormat };
+	var pars = { 	minFilter: THREE.LinearFilter,
+                 	magFilter: THREE.LinearFilter, 
+                 	format: THREE.RGBAFormat,
+					stencilBuffer: false };
+
 	this.renderTargetsHorizontal = [];
 	this.renderTargetsVertical = [];
 	this.nMips = 5;
+	
+	this.renderTargetOrigin = new THREE.WebGLRenderTarget( this.resolution.x, this.resolution.y, pars );
+	this.renderTargetOrigin.texture.generateMipmaps = false;
+
 	var resx = Math.round(this.resolution.x/2);
 	var resy = Math.round(this.resolution.y/2);
-
-	this.renderTargetBright = new THREE.WebGLRenderTarget( resx, resy, pars );
-	this.renderTargetBright.texture.generateMipmaps = false;
+	this.renderTargetLight = new THREE.WebGLRenderTarget( resx, resy, pars );
+	this.renderTargetLight.texture.generateMipmaps = false;
 
 	for( var i=0; i<this.nMips; i++) {
 
@@ -73,7 +77,7 @@ Bloom = function(resolution, strength, radius){
 	this.copyUniforms = THREE.UniformsUtils.clone( copyShader.uniforms );
 	this.copyUniforms[ "opacity" ].value = 1.0;
 
-	this.materialCopy = new THREE.ShaderMaterial( {
+	this.materialBlend = new THREE.ShaderMaterial( {
 		uniforms: this.copyUniforms,
 		vertexShader: copyShader.vertexShader,
 		fragmentShader: copyShader.fragmentShader,
@@ -82,9 +86,11 @@ Bloom = function(resolution, strength, radius){
 		depthWrite: false,
 		transparent: true
 	} );
-
-	this.enabled = true;
-	this.needsSwap = false;
+	this.materialCopy = new THREE.ShaderMaterial({
+		uniforms: this.copyUniforms,
+		vertexShader: copyShader.vertexShader,
+		fragmentShader: copyShader.fragmentShader
+	});
 
 	this.oldClearColor = new THREE.Color();
 	this.oldClearAlpha = 1;
@@ -97,7 +103,7 @@ Bloom = function(resolution, strength, radius){
 	this.scene.add( this.quad );
 }
 
-Bloom.prototype = Object.assign( Object.create( THREE.Pass.prototype ), {
+Bloom.prototype = Object.assign( Object.create( Object.prototype ), {
 
 	constructor: Bloom,
 
@@ -129,61 +135,55 @@ Bloom.prototype = Object.assign( Object.create( THREE.Pass.prototype ), {
 			resy = Math.round(resy/2);
 		}
 	},
-
-	render: function ( renderer, writeBuffer, readBuffer, delta, maskActive ) {
-
+	processing: function(renderer){
 		this.oldClearColor.copy( renderer.getClearColor() );
 		this.oldClearAlpha = renderer.getClearAlpha();
 		var oldAutoClear = renderer.autoClear;
 		renderer.autoClear = false;
 		renderer.setClearColor( new THREE.Color( 0, 0, 0 ), 0 );
 
-		// 1. Extract light Areas
-		renderer.state.buffers.stencil.setOp( renderer.context.KEEP, renderer.context.KEEP, renderer.context.KEEP );
-		renderer.state.buffers.stencil.setFunc( renderer.context.EQUAL, 1, 0xffffffff );
-		this.copyUniforms["tDiffuse" ].value = readBuffer.texture;
+		// Blur All the mips progressively
+		var inputRenderTarget = this.renderTargetLight;
+
+		for(var i=0; i<this.nMips; i++) {
+
+			this.quad.material = this.separableBlurMaterials[i];
+
+			this.separableBlurMaterials[i].uniforms[ "colorTexture" ].value = inputRenderTarget.texture;
+
+			this.separableBlurMaterials[i].uniforms[ "direction" ].value = new THREE.Vector2(1,0);
+
+			renderer.render( this.scene, this.camera, this.renderTargetsHorizontal[i], true );
+
+			this.separableBlurMaterials[i].uniforms[ "colorTexture" ].value = this.renderTargetsHorizontal[i].texture;
+
+			this.separableBlurMaterials[i].uniforms[ "direction" ].value = new THREE.Vector2(0,1);
+
+			renderer.render( this.scene, this.camera, this.renderTargetsVertical[i], true );
+
+			inputRenderTarget = this.renderTargetsVertical[i];
+		}
+
+		// Composite All the mips
+		this.quad.material = this.compositeMaterial;
+		this.compositeMaterial.uniforms["bloomStrength"].value = this.strength;
+		this.compositeMaterial.uniforms["bloomRadius"].value = this.radius;
+		this.compositeMaterial.uniforms["bloomTintColors"].value = this.bloomTintColors;
+		renderer.render( this.scene, this.camera, this.renderTargetsHorizontal[0], true );
+
+		// Blend it additively over the input texture
+		this.quad.material = this.materialBlend;
+		this.copyUniforms[ "tDiffuse" ].value = this.renderTargetsHorizontal[0].texture;
+		renderer.render( this.scene, this.camera, this.renderTargetOrigin, false );
+
+		renderer.setClearColor( this.oldClearColor, this.oldClearAlpha );
+		renderer.autoClear = oldAutoClear;
+
 		this.quad.material = this.materialCopy;
-		renderer.render( this.scene, this.camera, this.renderTargetBright, true );
-
-		// 2. Blur All the mips progressively
-		// var inputRenderTarget = this.renderTargetBright;
-
-		// for(var i=0; i<this.nMips; i++) {
-
-		// 	this.quad.material = this.separableBlurMaterials[i];
-
-		// 	this.separableBlurMaterials[i].uniforms[ "colorTexture" ].value = inputRenderTarget.texture;
-
-		// 	this.separableBlurMaterials[i].uniforms[ "direction" ].value = new THREE.Vector2(1,0);
-
-		// 	renderer.render( this.scene, this.camera, this.renderTargetsHorizontal[i], true );
-
-		// 	this.separableBlurMaterials[i].uniforms[ "colorTexture" ].value = this.renderTargetsHorizontal[i].texture;
-
-		// 	this.separableBlurMaterials[i].uniforms[ "direction" ].value = new THREE.Vector2(0,1);
-
-		// 	renderer.render( this.scene, this.camera, this.renderTargetsVertical[i], true );
-
-		// 	inputRenderTarget = this.renderTargetsVertical[i];
-		// }
-
-		// // Composite All the mips
-		// this.quad.material = this.compositeMaterial;
-		// this.compositeMaterial.uniforms["bloomStrength"].value = this.strength;
-		// this.compositeMaterial.uniforms["bloomRadius"].value = this.radius;
-		// this.compositeMaterial.uniforms["bloomTintColors"].value = this.bloomTintColors;
-		// renderer.render( this.scene, this.camera, this.renderTargetsHorizontal[0], true );
-
-		// // Blend it additively over the input texture
-		// this.quad.material = this.materialCopy;
-		// this.copyUniforms[ "tDiffuse" ].value = this.renderTargetsHorizontal[0].texture;
-
-		// renderer.render( this.scene, this.camera, readBuffer, false );
-
-		// renderer.setClearColor( this.oldClearColor, this.oldClearAlpha );
-		// renderer.autoClear = oldAutoClear;
+		this.copyUniforms[ "tDiffuse" ].value = this.renderTargetOrigin;
+		renderer.render(this.scene, this.camera);
 	},
-
+	
 	getSeperableBlurMaterial: function(kernelRadius) {
 
 		return new THREE.ShaderMaterial( {

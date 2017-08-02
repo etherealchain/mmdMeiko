@@ -36,19 +36,20 @@ var composer;
 var controls;
 
 var audioPlayer, audioVolume;
-var circleFloor, screen, rtTexture;
+var circleFloor, screen;
+// texture
+var rtTexture;
 var spotLight1,spotLight2,spotLight3;
 var lightHelper1,lightHelper2,lightHelper3;
 var textureLoader = new THREE.TextureLoader();
-var bloomTexture;
+var bloomProcess;
 
 var mirror, floorMaterial;
 var crowd = [];
 var textureSize = 512;
 var screenRatio = 1920/1080;
 var screenHeight = 60;
-var lightGroup;
-var otherGroup;
+var lightGroup, otherGroup;
 
 window.onload = init;
 
@@ -67,18 +68,20 @@ function init() {
     screenCamera.position.set(0,10,0);
 
     scene = new THREE.Scene();
-    rtTexture = new THREE.WebGLRenderTarget( textureSize, textureSize, { minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter, format: THREE.RGBFormat } );
-    bloomTexture = new THREE.WebGLRenderTarget(textureSize,textureSize, { minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter, format: THREE.RGBFormat });
+    scene.add(lightGroup);
+    scene.add(otherGroup);
+    rtTexture = new THREE.WebGLRenderTarget( textureSize, textureSize, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBFormat } );
+    bloomProcess = new Bloom(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4);
     
     screen = new THREE.Mesh(new THREE.PlaneBufferGeometry(screenRatio*screenHeight,screenHeight), new THREE.MeshPhongMaterial({color: 0xFFFFFF, map:rtTexture.texture}));
     screen.position.set(0,30,-100);
-    scene.add(screen);
+    otherGroup.add(screen);
 
     createLight();
     createCrowd();
 
     // renderer
-    renderer = new THREE.WebGLRenderer( { antialias: true } );
+    renderer = new THREE.WebGLRenderer( { antialias: false } );
     renderer.setPixelRatio( window.devicePixelRatio );
     renderer.setSize( window.innerWidth, window.innerHeight );
     renderer.setClearColor( new THREE.Color( 0x000000 ) );
@@ -90,12 +93,11 @@ function init() {
 
     let copyShader = new THREE.ShaderPass(THREE.CopyShader);
     copyShader.renderToScreen = true;
-    let bloomPass = new Bloom(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4);
 
     composer = new THREE.EffectComposer(renderer);
     composer.setSize(window.innerWidth, window.innerHeight);
-    composer.addPass(new THREE.RenderPass(scene2, controlCamera));
-    composer.addPass(bloomPass);
+    composer.addPass(new THREE.RenderPass(scene, controlCamera));
+    // composer.addPass(bloomPass);
     composer.addPass(copyShader);
 
     mirror = new MirrorReflection( controlCamera, { clipBias: 0.003,textureWidth:textureSize, textureHeight:textureSize } );
@@ -117,7 +119,7 @@ function init() {
     circleFloor.rotateX( - Math.PI / 2 );
     circleFloor.receiveShadow = true;
     circleFloor.position.setY(-0.1);
-    scene.add( circleFloor );
+    otherGroup.add(circleFloor);
 
     // STATS
     stats = new Stats();
@@ -170,7 +172,7 @@ function init() {
             loader.load( modelFile, vmdFiles, function ( object ) {
                 modelMesh = object;
                 modelMesh.castShadow = true;
-                scene.add( modelMesh );
+                otherGroup.add(modelMesh);
 
                 helper.add( modelMesh );
                 helper.setAnimation( modelMesh );
@@ -180,7 +182,7 @@ function init() {
                 */
                 ikHelper = new THREE.CCDIKHelper( modelMesh );
                 ikHelper.visible = false;
-                scene.add( ikHelper );
+                otherGroup.add(ikHelper);
 
                 /*
                 * Note: You're recommended to call helper.setPhysics()
@@ -189,11 +191,11 @@ function init() {
                 helper.setPhysics( modelMesh );
                 physicsHelper = new THREE.MMDPhysicsHelper( modelMesh );
                 physicsHelper.visible = false;
-                scene.add( physicsHelper );
+                otherGroup.add(physicsHelper);
                 helper.unifyAnimationDuration();
                 initGui();
                 animate();
-                // moveLight();
+                moveLight();
                 moveOtaku();
                 document.body.removeChild( loaderUI );
                 document.body.appendChild( container );
@@ -336,7 +338,7 @@ function render() {
     // renderer.context.enable(renderer.context.STENCIL_TEST);
     // renderer.context.stencilFunc(renderer.context.ALWAYS,1,0xffffffff);
     // renderer.context.stencilOp(renderer.context.REPLACE,renderer.context.REPLACE,renderer.context.REPLACE);
-    // renderer.render(scene2, controlCamera);
+    
     // renderer.context.disable(renderer.context.STENCIL_TEST);
 
     // render to screen
@@ -344,6 +346,13 @@ function render() {
     // render mirror
     // mirror.updateTextureMatrix();
     // renderer.render( scene, mirror.mirrorCamera, mirror.renderTarget, true);
+
+    // bloom processing
+    renderer.render(scene, controlCamera, bloomProcess.renderTargetOrigin, true);
+    scene.remove(otherGroup);
+    renderer.render(scene, controlCamera, bloomProcess.renderTargetLight, true);
+    bloomProcess.processing(renderer);
+    scene.add(otherGroup);
 
     // effect.render( scene, controlCamera );
     // composer.render();
@@ -369,8 +378,8 @@ function createCrowd(){
     let innerRadius = 60;
     let outerRadius = 65;
     let spriteMap = textureLoader.load( 'data/person.png' );
-    let spriteMaterial = new THREE.SpriteMaterial( { map: spriteMap, color: 0xffffff } );
-
+    let spriteMaterial = new THREE.SpriteMaterial( { map: spriteMap} );
+    
     for(i = 0; i < 100; i++){
         let theta = Math.random()*Math.PI*2;
         let radius = getRandomArbitrary(innerRadius, outerRadius);
@@ -379,12 +388,11 @@ function createCrowd(){
 }
 
 function createOtaku(x,y,z,spriteMaterial){
-    let scale = 5;
     let sprite = new THREE.Sprite( spriteMaterial );
-    sprite.scale.set(scale, 2*scale, 1);
+    sprite.scale.set(5,10,1);
     sprite.position.set(x,y,z);
     crowd.push(sprite);
-    scene.add(sprite);
+    otherGroup.add(sprite);
 }
 function moveOtaku(){
     let index = getRandomInt(0,crowd.length-1);
@@ -408,53 +416,49 @@ function moveOtaku(){
 
 
 // light
-var lights = [];
+var pointLights = [];
+var lightCircles = [];
 var lightMaterial;
 var lightRadius = 50;
 
 function moveLight(){
-    for(i = 0 ; i < lights.length; i++){
-        lights[i].degree = (lights[i].degree + 1)%360;
-        let radian = lights[i].degree*Math.PI/180;
+    for(i = 0 ; i < pointLights.length; i++){
+        pointLights[i].degree = (pointLights[i].degree + 1)%360;
+        let radian = pointLights[i].degree*Math.PI/180;
 
         x = lightRadius*Math.cos(radian);
         y = lightRadius*Math.sin(radian);
-        lights[i].children[0].position.set(x,y,0);
+        pointLights[i].children[0].position.set(x,y,0);
+        lightCircles[i].children[0].position.set(x,y,0);
     }
     setTimeout(moveLight, 20);
 }
 function createLight(){
     var ambient = new THREE.AmbientLight( 0x808080 );
-    scene.add( ambient );
+    otherGroup.add( ambient );
 
     lightMaterial = new THREE.ShaderMaterial( {
         uniforms: {
             scale: { type: "v3", value: new THREE.Vector3(5,5,1) },
             color: {value: new THREE.Color()}
         },
-        vertexShader: document.getElementById( 'lightVS' ).textContent,
+        vertexShader: document.getElementById( 'spriteVS' ).textContent,
         fragmentShader: document.getElementById( 'lightFS' ).textContent,
         transparent: true
     } );
 
     createPointLight(0xFF7F00);
-    // createPointLight(0x00FF7F);
-    // createPointLight(0x0DA2F2);
+    createPointLight(0x00FF7F);
+    createPointLight(0x0DA2F2);
 
-    lights[0].degree = 0;
-    // lights[1].rotateY(120*Math.PI/180);
-    // lights[1].degree = 30;
-    // lights[2].rotateY(240*Math.PI/180);
-    // lights[2].degree = 60;
+    pointLights[0].degree = 0;
+    pointLights[1].rotateY(120*Math.PI/180);
+    lightCircles[1].rotateY(120*Math.PI/180);
+    pointLights[1].degree = 30;
 
-    lights2[0].degree = 0;
-    
-    // lightSource = new THREE.Mesh( new THREE.PlaneGeometry( 1, 1 ), material );
-    // lightSource.position.set(0,50,0);
-    // pointLight = new THREE.PointLight(0xFF7F00,1,100);
-    // pointLight.castShadow = true;
-    // lightSource.add(pointLight);
-    // scene.add(lightSource);
+    pointLights[2].rotateY(240*Math.PI/180);
+    lightCircles[2].rotateY(240*Math.PI/180);
+    pointLights[2].degree = 60;
     
     // spotLight1 = createSpotlight( 0xFF7F00 );
     // spotLight2 = createSpotlight( 0x00FF7F );
@@ -474,16 +478,21 @@ function createLight(){
 function createPointLight(color){
    
     let pointLight = new THREE.PointLight(color, 1, lightRadius+10);
-    let lightBase = new THREE.Object3D();
+    let pointLightBase = new THREE.Object3D();
     pointLight.castShadow = true;
 
-    lightBase.add(pointLight);
-    scene.add(lightBase);
-    lights.push(lightBase);
+    pointLightBase.add(pointLight);
+    otherGroup.add(pointLightBase);
+    pointLights.push(pointLightBase);
 
     let material = lightMaterial.clone();
     material.uniforms.color.value = new THREE.Color(color);
     let lightCircle = new THREE.Mesh( new THREE.PlaneGeometry( 1, 1 ), material );
+    let lightCircleBase = new THREE.Object3D();
+
+    lightCircleBase.add(lightCircle);
+    lightGroup.add(lightCircleBase);
+    lightCircles.push(lightCircleBase);
 }
 
 function createSpotlight( color ) {

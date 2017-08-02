@@ -16,35 +16,17 @@
 			<div id="progressGray">
 				<div id="progressBlue">0%</div>
 			</div>
-			</div>
 		</div>
-		<script id="bloomVS" type="x-shader/x-vertex">
-			varying vec2 vUv;
-			void main{
-				vUv = uv;
-				gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
-			}
-		</script>
-		<script id="bloomFS" type="x-shader/x-vertex">
-			uniform sampler2D tDiffuse;
-			varying vec2 vUv;
-			
-			void main{
-				vec4 texel = texture2D( tDiffuse, vUv );
-			}
-		</script>
-		<script id="lightVS" type="x-shader/x-vertex">
+		<script id="spriteVS" type="x-shader/x-vertex">
 			uniform vec3 scale;
-			varying vec2 v_uv;
+			varying vec2 vUv;
                 
 			void main()
 			{
-				v_uv = uv;
+				vUv = uv;
 				float rotation = 0.0;
 
 				vec3 alignedPosition = vec3(position.x * scale.x, position.y * scale.y, position.z*scale.z);
-
-				vec2 pos = alignedPosition.xy;
 
 				vec2 rotatedPosition;
 				rotatedPosition.x = cos( rotation ) * alignedPosition.x - sin( rotation ) * alignedPosition.y;
@@ -59,11 +41,11 @@
 			}
 		</script>
 		<script id="lightFS" type="x-shader/x-fragment">
-			varying vec2 v_uv;
+			varying vec2 vUv;
 			uniform vec3 color;
-			void main( void ) {
+			void main() {
 
-				vec2 uv = v_uv;
+				vec2 uv = vUv;
 				// Zooms out by a factor of 2.0
 				uv *= 2.0;
 				// Shifts every axis by -1.0
@@ -74,6 +56,8 @@
 				
 				float smoothWidth = 0.01;
 				float alpha = smoothstep(circleRadius - smoothWidth, circleRadius, length(uv));
+				if(alpha == 1.0)
+					discard;
 				gl_FragColor = vec4( color , 1.0-alpha );
 			}
 		</script>
@@ -221,7 +205,6 @@
 		<script src="lib/EffectComposer.js"></script>
 		<script src="lib/RenderPass.js"></script>
     	<script src="lib/ShaderPass.js"></script>
-		<script src="lib/MaskPass.js"></script>
 		<script src="bloom.js"></script>
 
 		<script src="lib/OrbitControls.js"></script>
