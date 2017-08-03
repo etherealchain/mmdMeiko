@@ -23,6 +23,20 @@ let shader = {
     fragmentShader: document.getElementById( 'floorFS' ).textContent
 };
 
+if ( !window.requestAnimationFrame ) {
+
+	window.requestAnimationFrame = ( function() {
+
+		return window.webkitRequestAnimationFrame ||
+		window.mozRequestAnimationFrame ||
+		window.oRequestAnimationFrame ||
+		window.msRequestAnimationFrame ||
+		function( /* function FrameRequestCallback */ callback, /* DOMElement Element */ element ) {
+			window.setTimeout( callback, 1000 / 60 );
+		};
+
+	} )();
+}
 var container, stats, loaderUI, progressBlue;
 
 var scene;
@@ -32,6 +46,7 @@ var helper, ikHelper, physicsHelper;
 
 var mouseX = 0, mouseY = 0;
 var clock = new THREE.Clock();
+var clockLight = new THREE.Clock();
 var composer;
 var controls;
 
@@ -73,7 +88,7 @@ function init() {
     rtTexture = new THREE.WebGLRenderTarget( textureSize, textureSize, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBFormat } );
     bloomProcess = new Bloom(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4);
     
-    screen = new THREE.Mesh(new THREE.PlaneBufferGeometry(screenRatio*screenHeight,screenHeight), new THREE.MeshPhongMaterial({color: 0xFFFFFF, map:rtTexture.texture}));
+    screen = new THREE.Mesh(new THREE.PlaneBufferGeometry(screenRatio*screenHeight,screenHeight), new THREE.MeshBasicMaterial({color: 0xFFFFFF, map:rtTexture.texture}));
     screen.position.set(0,30,-100);
     otherGroup.add(screen);
 
@@ -193,9 +208,9 @@ function init() {
                 physicsHelper.visible = false;
                 otherGroup.add(physicsHelper);
                 helper.unifyAnimationDuration();
+
                 initGui();
                 animate();
-                moveLight();
                 moveOtaku();
                 document.body.removeChild( loaderUI );
                 document.body.appendChild( container );
@@ -317,40 +332,43 @@ function onWindowResize() {
 
 // render
 function animate() {
-    requestAnimationFrame( animate );
-    // TWEEN.update();
-    stats.begin();
+    window.requestAnimationFrame( animate );
+    TWEEN.update();
+    stats.update();
+
+    helper.animate( clock.getDelta() );
+    if ( physicsHelper !== undefined && physicsHelper.visible ) 
+        physicsHelper.update();
+    if ( ikHelper !== undefined && ikHelper.visible ) 
+        ikHelper.update();
+
+    // move light
+    let secondsPass = clockLight.getDelta();
+    for(i = 0 ; i < pointLights.length; i++){
+        pointLights[i].degree = (pointLights[i].degree + secondsPass*100)%360;
+        let radian = pointLights[i].degree*Math.PI/180;
+
+        x = lightRadius*Math.cos(radian);
+        y = lightRadius*Math.sin(radian);
+        pointLights[i].children[0].position.set(x,y,0);
+        lightCircles[i].children[0].position.set(x,y,0);
+    }
+
     render();
-    stats.end();
 }
 
 function render() {
-    
-    // if ( lightHelper1 ) lightHelper1.update();
-    // if ( lightHelper2 ) lightHelper2.update();
-    // if ( lightHelper3 ) lightHelper3.update();
 
-    helper.animate( clock.getDelta() );
-    if ( physicsHelper !== undefined && physicsHelper.visible ) physicsHelper.update();
-    if ( ikHelper !== undefined && ikHelper.visible ) ikHelper.update();
-
-    // setting stencil buffer;
-    // renderer.context.enable(renderer.context.STENCIL_TEST);
-    // renderer.context.stencilFunc(renderer.context.ALWAYS,1,0xffffffff);
-    // renderer.context.stencilOp(renderer.context.REPLACE,renderer.context.REPLACE,renderer.context.REPLACE);
-    
-    // renderer.context.disable(renderer.context.STENCIL_TEST);
-
-    // render to screen
-    // effect.render( scene, screenCamera, rtTexture, true);
+    // render to stage screen
+    // effect.render( scene, screenCamera, rtTexture);
     // render mirror
     // mirror.updateTextureMatrix();
     // renderer.render( scene, mirror.mirrorCamera, mirror.renderTarget, true);
 
     // bloom processing
-    renderer.render(scene, controlCamera, bloomProcess.renderTargetOrigin, true);
+    effect.render(scene, controlCamera, bloomProcess.renderTargetOrigin);
     scene.remove(otherGroup);
-    renderer.render(scene, controlCamera, bloomProcess.renderTargetLight, true);
+    renderer.render(scene, controlCamera, bloomProcess.renderTargetLight);
     bloomProcess.processing(renderer);
     scene.add(otherGroup);
 
@@ -421,18 +439,6 @@ var lightCircles = [];
 var lightMaterial;
 var lightRadius = 50;
 
-function moveLight(){
-    for(i = 0 ; i < pointLights.length; i++){
-        pointLights[i].degree = (pointLights[i].degree + 1)%360;
-        let radian = pointLights[i].degree*Math.PI/180;
-
-        x = lightRadius*Math.cos(radian);
-        y = lightRadius*Math.sin(radian);
-        pointLights[i].children[0].position.set(x,y,0);
-        lightCircles[i].children[0].position.set(x,y,0);
-    }
-    setTimeout(moveLight, 20);
-}
 function createLight(){
     var ambient = new THREE.AmbientLight( 0x808080 );
     otherGroup.add( ambient );
@@ -454,11 +460,11 @@ function createLight(){
     pointLights[0].degree = 0;
     pointLights[1].rotateY(120*Math.PI/180);
     lightCircles[1].rotateY(120*Math.PI/180);
-    pointLights[1].degree = 30;
+    pointLights[1].degree = 120;
 
     pointLights[2].rotateY(240*Math.PI/180);
     lightCircles[2].rotateY(240*Math.PI/180);
-    pointLights[2].degree = 60;
+    pointLights[2].degree = 240;
     
     // spotLight1 = createSpotlight( 0xFF7F00 );
     // spotLight2 = createSpotlight( 0x00FF7F );
