@@ -39,7 +39,7 @@ if ( !window.requestAnimationFrame ) {
 }
 var container, stats, loaderUI, progressBlue;
 
-var scene;
+var scene, sceneTest;
 var modelMesh, controlCamera, screenCamera;
 var renderer, effect;
 var helper, ikHelper, physicsHelper;
@@ -62,6 +62,7 @@ var bloomProcess;
 var mirror, floorMaterial;
 var crowd = [];
 var textureSize = 512;
+var mirrorSize = 1024;
 var screenRatio = 1920/1080;
 var screenHeight = 60;
 var lightGroup, otherGroup;
@@ -79,13 +80,14 @@ function init() {
     controlCamera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 2000 );
     controlCamera.position.set(0,50,100);
 
-    screenCamera = new THREE.PerspectiveCamera( 30, screenRatio, 1, 2000 ); 
+    screenCamera = new THREE.PerspectiveCamera( 10, screenRatio, 1, 200 ); 
     screenCamera.position.set(0,10,0);
 
     scene = new THREE.Scene();
     scene.add(lightGroup);
     scene.add(otherGroup);
-    rtTexture = new THREE.WebGLRenderTarget( textureSize, textureSize, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBFormat } );
+    rtTexture = new THREE.WebGLRenderTarget( textureSize, textureSize, 
+        { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBFormat } );
     bloomProcess = new Bloom(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4);
     
     screen = new THREE.Mesh(new THREE.PlaneBufferGeometry(screenRatio*screenHeight,screenHeight), new THREE.MeshBasicMaterial({color: 0xFFFFFF, map:rtTexture.texture}));
@@ -106,16 +108,16 @@ function init() {
 
     effect = new THREE.OutlineEffect( renderer );
 
-    let copyShader = new THREE.ShaderPass(THREE.CopyShader);
-    copyShader.renderToScreen = true;
+    // let copyShader = new THREE.ShaderPass(THREE.CopyShader);
+    // copyShader.renderToScreen = true;
 
-    composer = new THREE.EffectComposer(renderer);
-    composer.setSize(window.innerWidth, window.innerHeight);
-    composer.addPass(new THREE.RenderPass(scene, controlCamera));
+    // composer = new THREE.EffectComposer(renderer);
+    // composer.setSize(window.innerWidth, window.innerHeight);
+    // composer.addPass(new THREE.RenderPass(scene, controlCamera));
     // composer.addPass(bloomPass);
-    composer.addPass(copyShader);
+    // composer.addPass(copyShader);
 
-    mirror = new MirrorReflection( controlCamera, { clipBias: 0.003,textureWidth:textureSize, textureHeight:textureSize } );
+    mirror = new MirrorReflection( controlCamera, { clipBias: 0.003,textureWidth:mirrorSize, textureHeight:mirrorSize } );
 
     floorMaterial = new THREE.ShaderMaterial({
         vertexShader:shader.vertexShader,
@@ -330,7 +332,6 @@ function onWindowResize() {
     composer.setSize( window.innerWidth, window.innerHeight);
 }
 
-// render
 function animate() {
     window.requestAnimationFrame( animate );
     TWEEN.update();
@@ -360,10 +361,12 @@ function animate() {
 function render() {
 
     // render to stage screen
-    // effect.render( scene, screenCamera, rtTexture);
+    effect.render( scene, screenCamera, rtTexture);
     // render mirror
-    // mirror.updateTextureMatrix();
-    // renderer.render( scene, mirror.mirrorCamera, mirror.renderTarget, true);
+    otherGroup.remove(screen);
+    mirror.updateTextureMatrix();
+    renderer.render( scene, mirror.mirrorCamera, mirror.renderTarget);
+    otherGroup.add(screen);
 
     // bloom processing
     effect.render(scene, controlCamera, bloomProcess.renderTargetOrigin);
@@ -372,7 +375,6 @@ function render() {
     bloomProcess.processing(renderer);
     scene.add(otherGroup);
 
-    // effect.render( scene, controlCamera );
     // composer.render();
     // controls.update();
 }
