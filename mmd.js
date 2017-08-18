@@ -329,7 +329,7 @@ function onWindowResize() {
     controlCamera.updateProjectionMatrix();
 
     effect.setSize( window.innerWidth, window.innerHeight );
-    composer.setSize( window.innerWidth, window.innerHeight);
+    // composer.setSize( window.innerWidth, window.innerHeight);
 }
 
 function animate() {

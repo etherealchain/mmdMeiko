@@ -180,7 +180,7 @@ Bloom.prototype = Object.assign( Object.create( Object.prototype ), {
 		renderer.autoClear = oldAutoClear;
 
 		this.quad.material = this.materialCopy;
-		this.copyUniforms[ "tDiffuse" ].value = this.renderTargetOrigin;
+		this.copyUniforms[ "tDiffuse" ].value = this.renderTargetOrigin.texture;
 		renderer.render(this.scene, this.camera);
 	},
 	
