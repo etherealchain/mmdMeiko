@@ -15,5 +15,3 @@ I didn't own or make any of the model, music or animation
 [Music](http://www.nicovideo.jp/watch/sm30118344)
 
 [Camera movement](http://www.nicovideo.jp/watch/sm30214939)
-
-[Scene](http://youkan.info/html/material/cg_model/wire_stage8.php)
